@@ -1,21 +1,36 @@
 Articles = new Meteor.Collection('articles');
 
+function searchQuery(keywords) {
+  if ( keywords && keywords !== '' ) {
+    var searchFields = ['title','description'];
+    var searchQuery = [];
+    _.each(searchFields, function (field) {
+      searchKeywords = {};
+      searchKeywords[field] = { $regex: keywords.split(' ').join('|'), $options: 'i' };
+      searchQuery.push(searchKeywords);
+    });
+    // busca em qualquer um dos atributos. Sem isso ele buscaria em todos
+    return {$or: searchQuery};
+  }
+}
+
 if ( Meteor.isServer ) {
-  
+  // Cria um 20 artigos fake pra passar do 'limite' de 10 artigos definidos no publish
+  Meteor.startup(function (){
+    _.times(20, function (index) {
+      var title = 'Artigo super bacana sobre algo! {' + index + '}';
+      var description = 'Descrição bem curta desse artigo. Sei que vai amar!';
+      Articles.upsert({title: title}, {title: title, description: description});
+    });
+  })
+
   // Dado um conjunto de palavras chaves, gerar uma query que contenham pelo menos uma das palavras
   // chaves passadas em 'keywords' em qualquer atributo definido em 'searchFields', não diferenciando maiúsculas/minúsculas
   Meteor.publish('searchArticles', function (keywords) {
-    if ( keywords && keywords !== '' ) {
-      var searchFields = ['title','description'];
-      var searchQuery = [];
-      _.each(searchFields, function (field) {
-        searchKeywords = {};
-        searchKeywords[field] = { $regex: keywords.split(' ').join('|'), $options: 'i' };
-        searchQuery.push(searchKeywords);
-      });
-      // busca em qualquer um dos atributos. Sem isso ele buscaria em todos
-      return Articles.find({$or: searchQuery});
+    if ( searchQuery(keywords) ) {
+      return Articles.find(searchQuery(keywords), {limit: 10});
     } else {
+      // caso as palavras chaves estejam vazias não retorna artigo algum
       return [];
     }
   });
@@ -23,7 +38,7 @@ if ( Meteor.isServer ) {
 
 if ( Meteor.isClient ) {
   Meteor.startup(function (){
-    Session.set('keywords', '');
+    Session.set('keywords', 'artigo');
   })
 
   // Roda de novo sempre que as palavras chaves mudarem
@@ -33,7 +48,13 @@ if ( Meteor.isClient ) {
   });
 
   Template.results.articles = function () {
-    return Articles.find();
+    keywords = Session.get('keywords');
+    if ( searchQuery(keywords) ) {
+      return Articles.find(searchQuery(keywords));
+    } else {
+      // caso as palavras chaves estejam vazias não retorna artigo algum
+      return [];
+    }
   }
 
   Template.search.events = {
@@ -42,25 +63,18 @@ if ( Meteor.isClient ) {
     // as palavras chave como o valor definido no campo de busca.
     // Ignorar buscas com menos de 3 letras.
     'keyup input': function (e) {
-      recent_changed = true;
-      keywords = e.currentTarget.value;
-      delay(500, function () {
-        if ( keywords.length >= 3 ) {
-          Session.set('keywords', keywords);
-        } else {
-          Session.set('keywords', '');
-        }
-      });
+      lazySetKeywords(e.currentTarget.value);
     }
   }
 
-  // Função básica de delay que espera X segundos antes de executar a função definida em callback.
-  // Pode usar jquery debounce ou throttle ao invés disso
-  var timer;
-  function delay(ms, callback) {
-    clearTimeout(timer);
-    timer = setTimeout(callback, ms);
-  }
+  function setKeywords(keywords) {
+    if ( keywords.length >= 3 ) {
+      Session.set('keywords', keywords);
+    } else {
+      Session.set('keywords', '');
+    }
+  };
+  var lazySetKeywords = _.debounce(setKeywords, 500);
 
   Template.addArticle.events = {
 

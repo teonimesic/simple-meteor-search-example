@@ -1,0 +1,39 @@
+<head>
+  <title>simple-live-search</title>
+</head>
+
+<body>
+  {{> search}}
+  {{> results}}
+  {{> addArticle}}
+</body>
+
+<template name="search">
+  <h2>Busca</h2>
+  <input type="text" name="q" id="q" />
+</template>
+
+<template name="addArticle">
+  <h2>Adicionar Artigo</h2>
+  <form>
+    <label for="title">Título</label>
+    <input type="text" name="title" />
+    <br/>
+
+    <label for="description">Descrição</label>
+    <textarea name="description"></textarea>
+    <br/>
+
+    <input type="submit" value="Adicionar Artigo" />
+  </form>
+</template>
+
+<template name="results">
+  <h2>Resultados:</h2>
+  {{#each articles}}
+    <article>
+      <h1>{{title}}</h1>
+      <p>{{description}}</p>
+    </article>
+  {{/each}}
+</template>

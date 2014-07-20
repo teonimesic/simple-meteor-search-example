@@ -1,5 +1,7 @@
 Articles = new Meteor.Collection('articles');
 
+// Dado um conjunto de palavras chaves, gerar uma query que contenham pelo menos uma das palavras
+// chaves passadas em 'keywords' em qualquer atributo definido em 'searchFields', não diferenciando maiúsculas/minúsculas
 function searchQuery(keywords) {
   if ( keywords && keywords !== '' ) {
     var searchFields = ['title','description'];
@@ -24,8 +26,6 @@ if ( Meteor.isServer ) {
     });
   })
 
-  // Dado um conjunto de palavras chaves, gerar uma query que contenham pelo menos uma das palavras
-  // chaves passadas em 'keywords' em qualquer atributo definido em 'searchFields', não diferenciando maiúsculas/minúsculas
   Meteor.publish('searchArticles', function (keywords) {
     if ( searchQuery(keywords) ) {
       return Articles.find(searchQuery(keywords), {limit: 10});
